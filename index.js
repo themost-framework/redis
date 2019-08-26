@@ -1,4 +1,3 @@
-const ApplicationService = require('@themost/common').ApplicationService;
 const redis = require('redis');
 class RedisCacheStrategy {
 
