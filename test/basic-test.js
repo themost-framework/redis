@@ -5,35 +5,36 @@ describe('basic test', ()=> {
     let config;
     before(done => {
         config = new ConfigurationBase(__dirname);
+        config.useStrategy(RedisCacheStrategy, RedisCacheStrategy);
         return done();
     });
     it('should create strategy', ()=> {
-        let cacheStrategy = new RedisCacheStrategy(config);
+        let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         assert.isOk(cacheStrategy);
     });
     it('should add string', async ()=> {
-        let cacheStrategy = new RedisCacheStrategy(config);
+        let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('hello', 'Hello World');
         const value = await cacheStrategy.get('hello');
         assert.equal(value, 'Hello World');
         await cacheStrategy.remove('hello');
     });
     it('should add boolean', async ()=> {
-        let cacheStrategy = new RedisCacheStrategy(config);
+        let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('value1', true);
         const value = await cacheStrategy.get('value1');
         assert.equal(value, true);
         await cacheStrategy.remove('value1');
     });
     it('should add number', async ()=> {
-        let cacheStrategy = new RedisCacheStrategy(config);
+        let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('value1', 5.45);
         const value = await cacheStrategy.get('value1');
         assert.equal(value, 5.45);
         await cacheStrategy.remove('value1');
     });
     it('should add object', async ()=> {
-        let cacheStrategy = new RedisCacheStrategy(config);
+        let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('item1', {
             value: 100
         });
@@ -42,7 +43,7 @@ describe('basic test', ()=> {
         await cacheStrategy.remove('item1');
     });
     it('should use expiration', async ()=> {
-        let cacheStrategy = new RedisCacheStrategy(config);
+        let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('expired1', true, 1);
         await new Promise((resolve, reject) => {
             setTimeout(()=> {
@@ -58,7 +59,7 @@ describe('basic test', ()=> {
         });
     });
     it('should remove item', async ()=> {
-        let cacheStrategy = new RedisCacheStrategy(config);
+        let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('item1', {
             value: 100
         });

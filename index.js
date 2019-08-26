@@ -1,25 +1,56 @@
 const redis = require('redis');
 const genericPool = require("generic-pool");
+const TraceUtils = require('@themost/common').TraceUtils;
+const IApplication = require('@themost/common').IApplication;
+
+class RedisConnectionPool {
+    constructor(container) {
+        Object.defineProperty(this, 'container', {
+            enumerable: false,
+            writable: false,
+            value: container
+        });
+    }
+
+    create() {
+        return redis.createClient(this.options);
+    }
+
+    destroy(client) {
+        return client.end(true);
+    }
+
+}
 
 class RedisCacheStrategy {
 
-    constructor(config) {
+    constructor(container) {
+        let connectOptions;
+        let conectionPoolOptions;
+        if (container instanceof IApplication) {
+            TraceUtils.debug(`REDIS CACHE Get connection options from application configuration`);
+            connectOptions = container.getConfiguration().getSourceAt('settings/redis/options');
+
+            TraceUtils.debug(`REDIS CACHE Get connection pool options from application configuration`);
+            conectionPoolOptions = container.getConfiguration().getSourceAt('settings/redis/pool');
+        }
+        else {
+            TraceUtils.debug(`REDIS CACHE Get connection options from configuration`);
+            connectOptions = container.getSourceAt('settings/redis/options');
+
+            TraceUtils.debug(`REDIS CACHE Get connection pool options from configuration`);
+            conectionPoolOptions = container.getSourceAt('settings/redis/pool');
+        }
         // set connect options
-        this.options = Object.assign({}, config.getSourceAt('settings/redis/options'));
+        this.options = Object.assign({ }, connectOptions);
         // set pool options
-        const genericPoolOptions = Object.assign({
+        const poolOptions = Object.assign({
             min: 2,
             max: 25
-        }, config.getSourceAt('settings/redis/pool'));
-        // create generic pool
-        this.pool = genericPool.createPool({
-            create() {
-                return redis.createClient(this.options);
-            },
-            destroy(client) {
-                return client.end(true);
-            }
-        }, genericPoolOptions);
+        }, conectionPoolOptions);
+        // create generic createPool
+        this.pool = genericPool.createPool(new RedisConnectionPool(this), poolOptions);
+        TraceUtils.debug(`REDIS CACHE Connection pool was succesfully created.`);
     }
     /**
      *
@@ -57,16 +88,17 @@ class RedisCacheStrategy {
                 });
             }
             // finally release create
-            this.pool.release(client);
+            await this.pool.release(client);
         }
         catch (err) {
             if (client) {
                 try {
                     // try to release client
-                    this.pool.release(client);
+                    await this.pool.release(client);
                 }
-                catch(err) {
-                    // do nothing
+                catch (err) {
+                    TraceUtils.error('An error occurred while trying to release a redis client.');
+                    TraceUtils.error(err);
                 }
             }
             // and throw error
@@ -92,17 +124,18 @@ class RedisCacheStrategy {
                 });
             });
             // release client
-            this.pool.release(client);
+            await this.pool.release(client);
             return result;
         }
         catch (err) {
             if (client) {
                 try {
                     // try to release client
-                    this.pool.release(client);
+                    await this.pool.release(client);
                 }
-                catch(err) {
-                    // do nothing
+                catch (err) {
+                    TraceUtils.error('An error occurred while trying to release a redis client.');
+                    TraceUtils.error(err);
                 }
             }
             // and throw error
@@ -142,14 +175,15 @@ class RedisCacheStrategy {
             this.pool.release(client);
             return result;
         }
-        catch(err) {
+        catch (err) {
             if (client) {
                 try {
                     // try to release client
-                    this.pool.release(client);
+                    await this.pool.release(client);
                 }
-                catch(err) {
-                    // do nothing
+                catch (err) {
+                    TraceUtils.error('An error occurred while trying to release a redis client.');
+                    TraceUtils.error(err);
                 }
             }
             // and throw error
@@ -163,29 +197,48 @@ class RedisCacheStrategy {
      * @param {number=} absoluteExpiration
      * @returns Promise<*>
      */
-    getOrDefault(key, getDefaultValue, absoluteExpiration) {
-        const self = this;
-        const client = this.open();
-        return new Promise((resolve, reject) => {
-            client.get(key, (err, value) => {
-                // close client
-                client.end(true);
-                if (err) {
-                    return reject(err);
-                }
-                if (value == null) {
-                    return getDefaultValue().then(value => {
-                        // add value to cache for future calls
-                        return self.set(key, value, absoluteExpiration).then(() => {
-                            return resolve(value);
-                        });
-                    }).catch(err => {
+    async getOrDefault(key, getDefaultValue, absoluteExpiration) {
+        let client;
+        try {
+            const self = this;
+            client = await this.pool.acquire();
+            const result = await new Promise((resolve, reject) => {
+                client.get(key, (err, value) => {
+                    if (err) {
                         return reject(err);
-                    });
-                }
-                return resolve(JSON.parse(value));
+                    }
+                    if (value == null) {
+                        // call default value func
+                        return getDefaultValue().then(value => {
+                            // add value to cache for future calls
+                            return self.set(key, value, absoluteExpiration).then(() => {
+                                return resolve(value);
+                            });
+                        }).catch(err => {
+                            return reject(err);
+                        });
+                    }
+                    return resolve(JSON.parse(value));
+                });
             });
-        });
+            await this.pool.release(client);
+            return result;
+        }
+        catch (err) {
+            if (client) {
+                try {
+                    // try to release client
+                    await this.pool.release(client);
+                }
+                catch (err) {
+                    TraceUtils.error('An error occurred while trying to release a redis client.');
+                    TraceUtils.error(err);
+                }
+            }
+            // and throw error
+            throw err;
+        }
+
     }
 
 }
