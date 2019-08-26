@@ -1,9 +1,13 @@
-const ApplicationService = require('@themost/common/app').ApplicationService;
+const redis = require('redis');
+class RedisCacheStrategy {
 
-class RedisCacheStrategy extends ApplicationService {
+    constructor(config) {
+        // set connect options
+        this.options = Object.assign({ }, config.getSourceAt('settings/redis'));
+    }
 
-    constructor(app) {
-        super(app);
+    open() {
+        return redis.createClient(this.options);
     }
 
     /**
@@ -14,7 +18,29 @@ class RedisCacheStrategy extends ApplicationService {
      * @returns Promise<*>
      */
     add(key, value, absoluteExpiration) {
-        return Promise.resolve();
+        const client  = this.open();
+        if (typeof absoluteExpiration === 'number') {
+            return new Promise((resolve, reject) => {
+                client.set(key, JSON.stringify(value), 'EX', absoluteExpiration, err => {
+                    // close client
+                    client.end(true);
+                    if (err) {
+                        return reject(err);
+                    }
+                    return resolve();
+                });
+            });
+        }
+        return new Promise((resolve, reject) => {
+                client.set(key, JSON.stringify(value), err => {
+                    // close client
+                    client.end(true);
+                    if (err) {
+                        return reject(err);
+                    }
+                    return resolve();
+                });
+            });
     }
 
     /**
@@ -23,14 +49,24 @@ class RedisCacheStrategy extends ApplicationService {
      * @returns Promise<*>
      */
     remove(key) {
-        return Promise.resolve();
+        const client  = this.open();
+        return new Promise((resolve, reject) => {
+                client.del(key, err => {
+                    // close client
+                    client.end(true);
+                    if (err) {
+                        return reject(err);
+                    }
+                    return resolve(true);
+                });
+            });
     }
     /**
      *
      * @returns Promise<*>
      */
     clear() {
-        return Promise.resolve();
+        return Promise.reject('This operation is not supported by Redis cache strategy.');
     }
 
     /**
@@ -39,17 +75,51 @@ class RedisCacheStrategy extends ApplicationService {
      * @returns Promise<*>
      */
     get(key) {
-        return Promise.resolve();
+        const client  = this.open();
+        return new Promise((resolve, reject) => {
+                client.get(key, (err, value) => {
+                    // close client
+                    client.end(true);
+                    if (err) {
+                        return reject(err);
+                    }
+                    if (value) {
+                        return resolve(JSON.parse(value));    
+                    }
+                    return resolve();
+                });
+            });
     }
     /**
      *
      * @param {string} key
-     * @param {Promise<*>} func
+     * @param {Promise<*>} getDefaultValue
      * @param {number=} absoluteExpiration
      * @returns Promise<*>
      */
-    getOrDefault(key, func, absoluteExpiration) {
-        return Promise.resolve();
+    getOrDefault(key, getDefaultValue, absoluteExpiration) {
+        const self = this;
+        const client  = this.open();
+        return new Promise((resolve, reject) => {
+                client.get(key, (err, value) => {
+                    // close client
+                    client.end(true);
+                    if (err) {
+                        return reject(err);
+                    }
+                    if (value == null) {
+                        return getDefaultValue().then( value => {
+                            // add value to cache for future calls
+                            return self.set(key, value, absoluteExpiration).then(() => {
+                                return resolve(value);
+                            });
+                        }).catch( err => {
+                            return reject(err);
+                        });
+                    }
+                    return resolve(JSON.parse(value));
+                });
+            });
     }
 
 }

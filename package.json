@@ -4,10 +4,10 @@
   "description": "Most Web Framework Redis Cache Module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --timeout 15000"
   },
   "engines": {
-    "node": ">=6.9.0"
+    "node": ">=8.9.4"
   },
   "repository": {
     "type": "git",
@@ -28,12 +28,18 @@
   "homepage": "https://github.com/kbarbounakis/themost-redis#readme",
   "dependencies": {
     "@themost/common": "^2.1.4",
+    "@types/es6-promise": "^3.3.0",
     "redis": "^2.8.0"
   },
   "devDependencies": {
     "@types/chai": "^4.1.4",
+    "@types/core-js": "^2.5.2",
+    "@types/es6-shim": "^0.31.39",
     "@types/mocha": "^5.2.5",
+    "@types/node": "^12.7.2",
+    "@types/redis": "^2.8.13",
     "chai": "^4.1.2",
-    "mocha": "^5.2.0"
+    "mocha": "^6.2.0",
+    "typescript": "^3.5.3"
   }
 }
