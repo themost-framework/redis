@@ -29,12 +29,14 @@
   "dependencies": {
     "@themost/common": "^2.1.4",
     "@types/es6-promise": "^3.3.0",
+    "generic-pool": "^3.7.1",
     "redis": "^2.8.0"
   },
   "devDependencies": {
     "@types/chai": "^4.1.4",
     "@types/core-js": "^2.5.2",
     "@types/es6-shim": "^0.31.39",
+    "@types/generic-pool": "^3.1.9",
     "@types/mocha": "^5.2.5",
     "@types/node": "^12.7.2",
     "@types/redis": "^2.8.13",
