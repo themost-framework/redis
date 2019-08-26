@@ -211,7 +211,7 @@ class RedisCacheStrategy {
                         // call default value func
                         return getDefaultValue().then(value => {
                             // add value to cache for future calls
-                            return self.set(key, value, absoluteExpiration).then(() => {
+                            return self.add(key, value, absoluteExpiration).then(() => {
                                 return resolve(value);
                             });
                         }).catch(err => {

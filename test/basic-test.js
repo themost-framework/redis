@@ -70,4 +70,18 @@ describe('basic test', ()=> {
         assert.isUndefined(obj);
         cacheStrategy.remove('item1');
     });
+
+    it('should get default value', async ()=> {
+        let cacheStrategy = config.getStrategy(RedisCacheStrategy);
+        let obj = await cacheStrategy.getOrDefault('item1', ()=> {
+            return Promise.resolve({
+                value: 100
+            });
+        });
+        assert.equal(obj.value, 100);
+        obj = await cacheStrategy.get('item1');
+        assert.equal(obj.value, 100);
+        await cacheStrategy.remove('item1');
+    });
+
 });
