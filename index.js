@@ -2,7 +2,7 @@ const redis = require('redis');
 const genericPool = require("generic-pool");
 const TraceUtils = require('@themost/common').TraceUtils;
 const IApplication = require('@themost/common').IApplication;
-
+const promisify = require('es6-promisify').promisify;
 class RedisConnectionPool {
     constructor(container) {
         Object.defineProperty(this, 'container', {
@@ -64,28 +64,15 @@ class RedisCacheStrategy {
         try {
             // get client
             client = await this.pool.acquire();
+            const setAsync = promisify(client.set).bind(client);
             // if absolute expiration is defined
             if (typeof absoluteExpiration === 'number' && absoluteExpiration >= 0) {
                 // set item with expiration
-                await new Promise((resolve, reject) => {
-                    client.set(key, JSON.stringify(value), 'EX', absoluteExpiration, err => {
-                        if (err) {
-                            return reject(err);
-                        }
-                        return resolve();
-                    });
-                });
+                await setAsync(key, JSON.stringify(value), 'EX', absoluteExpiration);
             }
             else {
                 // set item without expiration
-                await new Promise((resolve, reject) => {
-                    client.set(key, JSON.stringify(value), err => {
-                        if (err) {
-                            return reject(err);
-                        }
-                        return resolve();
-                    });
-                });
+                await setAsync(key, JSON.stringify(value));
             }
             // finally release create
             await this.pool.release(client);
@@ -114,18 +101,15 @@ class RedisCacheStrategy {
     async remove(key) {
         let client;
         try {
+            // get client
             client = await this.pool.acquire();
-            const result = await new Promise((resolve, reject) => {
-                client.del(key, err => {
-                    if (err) {
-                        return reject(err);
-                    }
-                    return resolve(true);
-                });
-            });
+            const delAsync = promisify(client.del).bind(client);
+            // remove item by key
+            const result = await delAsync(key);
             // release client
             await this.pool.release(client);
-            return result;
+            // return true if key has been removed
+            return (result >= 1);
         }
         catch (err) {
             if (client) {
@@ -159,21 +143,17 @@ class RedisCacheStrategy {
     async get(key) {
         let client;
         try {
+            // get client
             client = await this.pool.acquire();
-            const result = await new Promise((resolve, reject) => {
-                client.get(key, (err, value) => {
-                    if (err) {
-                        return reject(err);
-                    }
-                    if (value) {
-                        return resolve(JSON.parse(value));
-                    }
-                    return resolve();
-                });
-            });
+            const getAsync = promisify(client.get).bind(client);
+            // get item
+            const result = await getAsync(key);
             // try to release client
             this.pool.release(client);
-            return result;
+            if (result == null) {
+                return;
+            }
+            return JSON.parse(result);
         }
         catch (err) {
             if (client) {
@@ -200,27 +180,22 @@ class RedisCacheStrategy {
     async getOrDefault(key, getDefaultValue, absoluteExpiration) {
         let client;
         try {
-            const self = this;
             client = await this.pool.acquire();
-            const result = await new Promise((resolve, reject) => {
-                client.get(key, (err, value) => {
-                    if (err) {
-                        return reject(err);
-                    }
-                    if (value == null) {
-                        // call default value func
-                        return getDefaultValue().then(value => {
-                            // add value to cache for future calls
-                            return self.add(key, value, absoluteExpiration).then(() => {
-                                return resolve(value);
-                            });
-                        }).catch(err => {
-                            return reject(err);
-                        });
-                    }
-                    return resolve(JSON.parse(value));
-                });
-            });
+            const getAsync = promisify(client.get).bind(client);
+
+            // try to get item// get item
+            let value = await getAsync(key);
+            let result;
+            if (value == null) {
+                // call default value func
+                result = await getDefaultValue();
+                // add value to cache
+                this.add(key, result, absoluteExpiration);
+            }
+            else {
+                result = JSON.parse(value);
+            }
+            // release client
             await this.pool.release(client);
             return result;
         }
