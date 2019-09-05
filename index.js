@@ -27,12 +27,22 @@ class RedisCacheStrategy {
     constructor(container) {
         let connectOptions;
         let conectionPoolOptions;
-        if (container instanceof IApplication) {
+        // container is typeof IApplication
+        const thisService = this;
+        if (typeof container.getConfiguration === 'function') {
             TraceUtils.debug(`REDIS CACHE Get connection options from application configuration`);
             connectOptions = container.getConfiguration().getSourceAt('settings/redis/options');
 
             TraceUtils.debug(`REDIS CACHE Get connection pool options from application configuration`);
             conectionPoolOptions = container.getConfiguration().getSourceAt('settings/redis/pool');
+            // set data configuration strategy
+            // search if container configuration has a service of hidden type of DataCacheStrategy (@themost/data)
+            if (container.getConfiguration().hasStrategy(function DataCacheStrategy() { })) {
+                // and set service of DataCacheStrategy type to have a strategy which returns this service
+                container.getConfiguration().useStrategy(function DataCacheStrategy() { }, function() {
+                    return thisService;
+                });
+            }
         }
         else {
             TraceUtils.debug(`REDIS CACHE Get connection options from configuration`);
@@ -40,6 +50,16 @@ class RedisCacheStrategy {
 
             TraceUtils.debug(`REDIS CACHE Get connection pool options from configuration`);
             conectionPoolOptions = container.getSourceAt('settings/redis/pool');
+            if (typeof container.hasStrategy === 'function') {
+                // set data configuration strategy
+                // search if container has a service of hidden type of DataCacheStrategy (@themost/data)
+                if (container.hasStrategy(function DataCacheStrategy() { })) {
+                    // and set service of DataCacheStrategy type to have a strategy which returns this service
+                    container.useStrategy(function DataCacheStrategy() { }, function() {
+                        return thisService;
+                    });
+                }
+            }
         }
         // set connect options
         this.options = Object.assign({ }, connectOptions);
