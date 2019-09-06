@@ -62,7 +62,7 @@ class RedisCacheStrategy {
             }
         }
         // set connect options
-        this.options = Object.assign({ }, connectOptions);
+        this.options = Object.assign({ absolute_expiration: 1200 }, connectOptions);
         // set pool options
         const poolOptions = Object.assign({
             min: 2,
@@ -91,8 +91,8 @@ class RedisCacheStrategy {
                 await setAsync(key, JSON.stringify(value), 'EX', absoluteExpiration);
             }
             else {
-                // set item without expiration
-                await setAsync(key, JSON.stringify(value));
+                // get absolute expiration from connect options and set item
+                await setAsync(key, JSON.stringify(value), 'EX', this.options.absolute_expiration);
             }
             // finally release create
             await this.pool.release(client);

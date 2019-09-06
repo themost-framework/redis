@@ -32,6 +32,11 @@ redis#pool section contains options about configuring connection pooling.
 
 Read more about connect options at [NodeRedis instructions](https://github.com/NodeRedis/node_redis#options-object-properties).
 
+#### Additional Options
+| Property  | Default   | Description |
+|-----------|-----------|-------------|
+| absolute_expiration | 1200 | The expiration timeout of a key in seconds, if a timeout has not been defined during set. After the timeout has expired, the key will automatically be deleted. |
+
 Follow instructions provided by [Generic Pool](https://github.com/coopernurse/node-pool#documentation) 
 to configure connection pooling.
 
