@@ -13,7 +13,7 @@ class RedisConnectionPool {
     }
 
     create() {
-        return redis.createClient(this.options);
+        return redis.createClient(this.container && this.container.options);
     }
 
     destroy(client) {
