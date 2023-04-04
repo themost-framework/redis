@@ -1,4 +1,4 @@
-const redis = require('redis');
+const { createClient } = require('redis');
 const genericPool = require("generic-pool");
 const {TraceUtils} = require('@themost/common');
 const {promisify} = require('es6-promisify');
@@ -11,8 +11,13 @@ class RedisConnectionPool {
         });
     }
 
-    create() {
-        return redis.createClient(this.container && this.container.options);
+    async create() {
+        const client = createClient(this.container && this.container.options);
+        if (client.isOpen) {
+            return client;
+        }
+        await client.connect();
+        return client;
     }
 
     destroy(client) {
@@ -83,15 +88,18 @@ class RedisCacheStrategy {
         try {
             // get client
             client = await this.pool.acquire();
-            const setAsync = promisify(client.set).bind(client);
             // if absolute expiration is defined
             if (typeof absoluteExpiration === 'number' && absoluteExpiration >= 0) {
                 // set item with expiration
-                await setAsync(key, JSON.stringify(value), 'EX', absoluteExpiration);
+                await client.set(key, JSON.stringify(value), {
+                    'EX': absoluteExpiration
+                });
             }
             else {
                 // get absolute expiration from connect options and set item
-                await setAsync(key, JSON.stringify(value), 'EX', this.options.absolute_expiration);
+                await client.set(key, JSON.stringify(value), {
+                    'EX': this.options.absolute_expiration
+                });
             }
             // finally release create
             await this.pool.release(client);
@@ -122,9 +130,8 @@ class RedisCacheStrategy {
         try {
             // get client
             client = await this.pool.acquire();
-            const delAsync = promisify(client.del).bind(client);
             // remove item by key
-            const result = await delAsync(key);
+            const result = await client.del(key);
             // release client
             await this.pool.release(client);
             // return true if key has been removed
@@ -164,9 +171,8 @@ class RedisCacheStrategy {
         try {
             // get client
             client = await this.pool.acquire();
-            const getAsync = promisify(client.get).bind(client);
             // get item
-            const result = await getAsync(key);
+            const result = await client.get(key);
             // try to release client
             this.pool.release(client);
             if (result == null) {
@@ -200,10 +206,9 @@ class RedisCacheStrategy {
         let client;
         try {
             client = await this.pool.acquire();
-            const getAsync = promisify(client.get).bind(client);
-
+            
             // try to get item// get item
-            let value = await getAsync(key);
+            let value = await client.get(key);
             let result;
             if (value == null) {
                 // call default value func

@@ -42,6 +42,9 @@ describe('RedisCacheStrategy', ()=> {
         await cacheStrategy.remove('item1');
     });
     it('should use expiration', async ()=> {
+        /**
+         * @type {RedisCacheStrategy}
+         */
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('expired1', true, 1);
         await new Promise((resolve, reject) => {
