@@ -8,5 +8,6 @@ tasks:
   - init: |
       npm install &&
       sudo apt-get install redis -y &&
-      redis-server
+      redis-server &&
+      echo -e "NODE_ENV=development" >> .env
 

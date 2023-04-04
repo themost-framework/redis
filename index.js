@@ -1,7 +1,6 @@
 const { createClient } = require('redis');
 const genericPool = require("generic-pool");
 const {TraceUtils} = require('@themost/common');
-const {promisify} = require('es6-promisify');
 class RedisConnectionPool {
     constructor(container) {
         Object.defineProperty(this, 'container', {
@@ -20,8 +19,10 @@ class RedisConnectionPool {
         return client;
     }
 
-    destroy(client) {
-        return client.end(true);
+    async destroy(client) {
+        if (client && client.isOpen) {
+            await client.quit()
+        }
     }
 
 }
@@ -238,6 +239,28 @@ class RedisCacheStrategy {
             throw err;
         }
 
+    }
+
+    finalize(callback) {
+        callback = callback || function() {}
+        if (this.pool == null) {
+            return callback();
+        }
+        void this.pool.clear().then(() => {
+            return callback();
+        }).catch((err) => {
+            TraceUtils.warn('An error occurred while finalizing RedisCacheStategy');
+            TraceUtils.warn(err);
+            return callback();
+        });
+    }
+
+    async finalizeAsync() {
+        return new Promise((resolve) => {
+            this.finalize(() => {
+                return resolve();
+            });
+        })
     }
 
 }

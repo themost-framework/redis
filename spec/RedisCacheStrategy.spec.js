@@ -2,11 +2,16 @@ const {RedisCacheStrategy} = require('../index');
 const {ConfigurationBase} = require('@themost/common');
 describe('RedisCacheStrategy', ()=> {
     let config;
-    beforeAll(done => {
+    beforeAll((done) => {
         config = new ConfigurationBase(__dirname);
         config.useStrategy(RedisCacheStrategy, RedisCacheStrategy);
         return done();
     });
+    afterAll((done) => {
+        config.getStrategy(RedisCacheStrategy).finalize(() => {
+            return done();
+        });
+    })
     it('should create strategy', ()=> {
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         expect(cacheStrategy).toBeTruthy();
