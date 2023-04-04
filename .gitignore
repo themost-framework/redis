@@ -1,5 +1,7 @@
 .idea
-package-lock.json
+.vscode
+.theia
+.DS_Store
 # Logs
 logs
 *.log
@@ -61,3 +63,6 @@ typings/
 
 # next.js build output
 .next
+
+# redis
+dump.rdb

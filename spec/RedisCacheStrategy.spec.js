@@ -1,36 +1,56 @@
-const RedisCacheStrategy = require('../index').RedisCacheStrategy;
-const ConfigurationBase = require('@themost/common').ConfigurationBase;
-const assert = require('chai').assert;
-describe('basic test', ()=> {
+const {RedisCacheStrategy} = require('../index');
+const {ConfigurationBase} = require('@themost/common');
+describe('RedisCacheStrategy', ()=> {
     let config;
-    before(done => {
+    beforeAll((done) => {
         config = new ConfigurationBase(__dirname);
         config.useStrategy(RedisCacheStrategy, RedisCacheStrategy);
         return done();
     });
+    afterAll((done) => {
+        config.getStrategy(RedisCacheStrategy).finalize(() => {
+            return done();
+        });
+    })
     it('should create strategy', ()=> {
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
-        assert.isOk(cacheStrategy);
+        expect(cacheStrategy).toBeTruthy();
+    });
+    it('should try to connect', async ()=> {
+        newConfig = new ConfigurationBase(__dirname);
+        newConfig.setSourceAt('settings/redis', {
+            "options": {
+                "host": "127.0.0.1",
+                "port": 1000
+            }
+        })
+        const cacheStrategy = new RedisCacheStrategy({
+            getConfiguration() {
+                return newConfig;
+            }
+        })
+        expect(cacheStrategy).toBeTruthy();
+        await expectAsync(cacheStrategy.getOrDefault('hello', async () => true)).toBeRejectedWithError('connect ECONNREFUSED 127.0.0.1:1000');
     });
     it('should add string', async ()=> {
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('hello', 'Hello World');
         const value = await cacheStrategy.get('hello');
-        assert.equal(value, 'Hello World');
+        expect(value).toEqual('Hello World');
         await cacheStrategy.remove('hello');
     });
     it('should add boolean', async ()=> {
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('value1', true);
         const value = await cacheStrategy.get('value1');
-        assert.equal(value, true);
+        expect(value).toEqual(true);
         await cacheStrategy.remove('value1');
     });
     it('should add number', async ()=> {
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('value1', 5.45);
         const value = await cacheStrategy.get('value1');
-        assert.equal(value, 5.45);
+        expect(value).toEqual(5.45);
         await cacheStrategy.remove('value1');
     });
     it('should add object', async ()=> {
@@ -39,23 +59,26 @@ describe('basic test', ()=> {
             value: 100
         });
         const obj = await cacheStrategy.get('item1');
-        assert.equal(obj.value, 100);
+        expect(obj.value).toEqual(100);
         await cacheStrategy.remove('item1');
     });
     it('should use expiration', async ()=> {
+        /**
+         * @type {RedisCacheStrategy}
+         */
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
-        await cacheStrategy.add('expired1', true, 1);
+        await cacheStrategy.add('expired1', true, 5);
         await new Promise((resolve, reject) => {
             setTimeout(()=> {
                 cacheStrategy.get('expired1').then( value => {
-                    assert.isUndefined(value);
+                    expect(value).toBeFalsy();
                     return cacheStrategy.remove('expired1').then(() => {
                         return resolve();
                     });
                 }).catch(err => {
                     return reject(err);
                 });
-            }, 2000);
+            }, 7000);
         });
     });
     it('should remove item', async ()=> {
@@ -64,10 +87,10 @@ describe('basic test', ()=> {
             value: 100
         });
         let obj = await cacheStrategy.get('item1');
-        assert.equal(obj.value, 100);
+        expect(obj.value).toEqual(100);
         await cacheStrategy.remove('item1');
         obj = await cacheStrategy.get('item1');
-        assert.isUndefined(obj);
+        expect(obj).toBeFalsy();
         cacheStrategy.remove('item1');
     });
 
@@ -78,9 +101,9 @@ describe('basic test', ()=> {
                 value: 100
             });
         });
-        assert.equal(obj.value, 100);
+        expect(obj.value).toEqual(100);
         obj = await cacheStrategy.get('item1');
-        assert.equal(obj.value, 100);
+        expect(obj.value).toEqual(100);
         await cacheStrategy.remove('item1');
     });
 
