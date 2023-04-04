@@ -1,8 +1,7 @@
 const redis = require('redis');
 const genericPool = require("generic-pool");
-const TraceUtils = require('@themost/common').TraceUtils;
-const IApplication = require('@themost/common').IApplication;
-const promisify = require('es6-promisify').promisify;
+const {TraceUtils} = require('@themost/common');
+const {promisify} = require('es6-promisify');
 class RedisConnectionPool {
     constructor(container) {
         Object.defineProperty(this, 'container', {
@@ -238,4 +237,6 @@ class RedisCacheStrategy {
 
 }
 
-module.exports.RedisCacheStrategy = RedisCacheStrategy;
+module.exports = {
+    RedisCacheStrategy
+};

@@ -1,4 +1,17 @@
+# ide
 .idea
+.vscode
+.theia
+.DS_Store
+
+# node
 node_modules
-test
-package-lock.json
+
+# test
+spec
+
+# github
+.github
+
+# gitpod
+.gitpod
