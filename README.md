@@ -48,7 +48,7 @@ Configure application services to use RedisCacheStrategy as default caching serv
         "services": [
             ...
             {
-                "serviceType": "@themost/web#CacheStrategy",
+                "serviceType": "@themost/data#DataCacheStrategy",
                 "strategyType": "@themost/redis#RedisCacheStrategy"
             }
         ]

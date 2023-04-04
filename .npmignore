@@ -9,12 +9,14 @@ node_modules
 
 # test
 spec
+.env
+*.rdb
 
 # github
 .github
 
 # gitpod
-.gitpod
+.gitpod.yml
 
 # ts
 tsconfig.json
