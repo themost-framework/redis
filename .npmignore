@@ -15,3 +15,6 @@ spec
 
 # gitpod
 .gitpod
+
+# ts
+tsconfig.json
