@@ -16,6 +16,22 @@ describe('RedisCacheStrategy', ()=> {
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         expect(cacheStrategy).toBeTruthy();
     });
+    it('should try to connect', async ()=> {
+        newConfig = new ConfigurationBase(__dirname);
+        newConfig.setSourceAt('settings/redis', {
+            "options": {
+                "host": "127.0.0.1",
+                "port": 1000
+            }
+        })
+        const cacheStrategy = new RedisCacheStrategy({
+            getConfiguration() {
+                return newConfig;
+            }
+        })
+        expect(cacheStrategy).toBeTruthy();
+        await expectAsync(cacheStrategy.getOrDefault('hello', async () => true)).toBeRejectedWithError('connect ECONNREFUSED 127.0.0.1:1000');
+    });
     it('should add string', async ()=> {
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('hello', 'Hello World');
@@ -51,7 +67,7 @@ describe('RedisCacheStrategy', ()=> {
          * @type {RedisCacheStrategy}
          */
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
-        await cacheStrategy.add('expired1', true, 1);
+        await cacheStrategy.add('expired1', true, 5);
         await new Promise((resolve, reject) => {
             setTimeout(()=> {
                 cacheStrategy.get('expired1').then( value => {
@@ -62,7 +78,7 @@ describe('RedisCacheStrategy', ()=> {
                 }).catch(err => {
                     return reject(err);
                 });
-            }, 2000);
+            }, 7000);
         });
     });
     it('should remove item', async ()=> {

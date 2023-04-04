@@ -10,13 +10,8 @@ class RedisConnectionPool {
         });
     }
 
-    async create() {
-        const client = createClient(this.container && this.container.options);
-        if (client.isOpen) {
-            return client;
-        }
-        await client.connect();
-        return client;
+    create() {
+        return createClient(this.container && this.container.options);
     }
 
     async destroy(client) {
@@ -37,6 +32,18 @@ class RedisCacheStrategy {
         if (typeof container.getConfiguration === 'function') {
             TraceUtils.debug(`REDIS CACHE Get connection options from application configuration`);
             connectOptions = container.getConfiguration().getSourceAt('settings/redis/options');
+            // preserve compatibility from previous versions ()
+            if (Object.prototype.hasOwnProperty.call(connectOptions, 'host') || Object.prototype.hasOwnProperty.call(connectOptions, 'port')) {
+                // and move properties to socket.host and socket.port
+                const host = connectOptions.host;
+                const port = connectOptions.port;
+                Object.assign(connectOptions, {
+                    socket: {
+                        host,
+                        port
+                    }
+                })
+            }
 
             TraceUtils.debug(`REDIS CACHE Get connection pool options from application configuration`);
             conectionPoolOptions = container.getConfiguration().getSourceAt('settings/redis/pool');
@@ -89,6 +96,7 @@ class RedisCacheStrategy {
         try {
             // get client
             client = await this.pool.acquire();
+            if (client.isOpen === false) { await client.connect(); }
             // if absolute expiration is defined
             if (typeof absoluteExpiration === 'number' && absoluteExpiration >= 0) {
                 // set item with expiration
@@ -131,6 +139,7 @@ class RedisCacheStrategy {
         try {
             // get client
             client = await this.pool.acquire();
+            if (client.isOpen === false) { await client.connect(); }
             // remove item by key
             const result = await client.del(key);
             // release client
@@ -172,6 +181,7 @@ class RedisCacheStrategy {
         try {
             // get client
             client = await this.pool.acquire();
+            if (client.isOpen === false) { await client.connect(); }
             // get item
             const result = await client.get(key);
             // try to release client
@@ -207,7 +217,7 @@ class RedisCacheStrategy {
         let client;
         try {
             client = await this.pool.acquire();
-            
+            if (client.isOpen === false) { await client.connect(); }
             // try to get item// get item
             let value = await client.get(key);
             let result;
