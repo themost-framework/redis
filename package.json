@@ -1,6 +1,6 @@
 {
   "name": "@themost/redis",
-  "version": "4.1.1",
+  "version": "4.6.0",
   "description": "Most Web Framework Redis Cache Module",
   "main": "index.js",
   "types": "index.d.ts",
