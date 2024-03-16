@@ -11,12 +11,23 @@ class RedisConnectionPool {
     }
 
     create() {
-        return createClient(this.container && this.container.options);
+        const client = createClient(this.container && this.container.options);
+        client.on('error', (err) => {
+            TraceUtils.error('An error occurred while using redis client.');
+            TraceUtils.error(err);
+            // handle socket close error
+            if (err.message === 'Socket closed unexpectedly') {
+                TraceUtils.info('Socket closed unexpectedly. Disconnecting...');
+                // quit client
+                client.disconnect();
+            }
+        });
+        return client;
     }
 
     async destroy(client) {
         if (client && client.isOpen) {
-            await client.quit()
+            await client.quit();
         }
     }
 
@@ -92,9 +103,14 @@ class RedisCacheStrategy {
      * @returns Promise<*>
      */
     async add(key, value, absoluteExpiration) {
+        /**
+         * @type {import('redis').RedisClient}
+         */
         let client;
         try {
-            // get client
+            /**
+             * @type {import('redis').RedisClient}
+             */
             client = await this.pool.acquire();
             if (client.isOpen === false) { await client.connect(); }
             // if absolute expiration is defined
@@ -135,9 +151,11 @@ class RedisCacheStrategy {
      * @returns Promise<*>
      */
     async remove(key) {
+        /**
+         * @type {import('redis').RedisClient}
+         */
         let client;
-        try {
-            // get client
+        try { 
             client = await this.pool.acquire();
             if (client.isOpen === false) { await client.connect(); }
             // remove item by key
@@ -177,6 +195,9 @@ class RedisCacheStrategy {
      * @returns Promise<*>
      */
     async get(key) {
+        /**
+         * @type {import('redis').RedisClient}
+         */
         let client;
         try {
             // get client
