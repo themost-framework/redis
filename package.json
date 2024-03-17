@@ -32,14 +32,15 @@
   },
   "dependencies": {
     "generic-pool": "^3.9.0",
-    "redis": "^4.6.5"
+    "ioredis": "^5.3.2"
   },
   "devDependencies": {
+    "@themost/test": "^2.3.4",
     "@types/core-js": "^2.5.2",
     "@types/generic-pool": "^3.1.9",
+    "@types/ioredis": "^5.0.0",
     "@types/jasmine": "^4.3.1",
     "@types/node": "^12.7.2",
-    "@types/redis": "^2.8.13",
     "dotenv": "^16.0.3",
     "jasmine": "^4.6.0",
     "jasmine-spec-reporter": "^7.0.0",

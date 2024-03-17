@@ -1,6 +1,7 @@
-import {ApplicationService} from '@themost/common';
+import {ApplicationBase, ApplicationService, ConfigurationBase} from '@themost/common';
 
 export declare class RedisCacheStrategy extends ApplicationService {
+    constructor(container: ConfigurationBase | ApplicationBase)
     add(key: string, value: any, absoluteExpiration?: number): Promise<any>;
     clear(): Promise<any>;
     get(key: string): Promise<any>;
