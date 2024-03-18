@@ -51,15 +51,17 @@ class RedisCacheStrategy {
             host: '127.0.0.1',
             port: 6379
          }, redisConfiguration.options);
-        // get connection pool options
-        const conectionPoolOptions = Object.assign({
-            min: 2,
-            max: 25
-        }, redisConfiguration.pool);
-        // create connection pool
-        this.pool = genericPool.createPool(new RedisConnectionPool(this), conectionPoolOptions);
-        // set absolute expiration
-        this.absoluteExpiration = redisConfiguration.absolute_expiration || 1200;
+          // set absolute expiration
+          this.absoluteExpiration = redisConfiguration.absolute_expiration || 1200;
+         if (redisConfiguration.pool) {
+            // get connection pool options
+            const conectionPoolOptions = Object.assign({
+                min: 2,
+                max: 25
+            }, redisConfiguration.pool);
+            // create connection pool
+            this.pool = genericPool.createPool(new RedisConnectionPool(this), conectionPoolOptions);
+         }
     }
 
     /**
@@ -236,7 +238,7 @@ class RedisCacheStrategy {
                 // call default value func
                 result = await getDefaultValue();
                 // add value to cache
-                this.add(key, result, absoluteExpiration);
+                await this.add(key, result, absoluteExpiration);
             }
             else {
                 result = JSON.parse(value);
