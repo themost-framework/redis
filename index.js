@@ -136,18 +136,24 @@ class RedisCacheStrategy {
      */
     async remove(key) {
         /**
-         * @type {import('redis').RedisClient}
+         * @type {Redis}
          */
         let client;
         try { 
             client = await this.acquire();
             if (client.isOpen === false) { await client.connect(); }
-            // remove item by key
-            const result = await client.del(key);
+            const keys = await client.keys(key);
+            if (keys.length) {
+                const pipeline = client.pipeline();
+                for (const key of keys) {
+                    pipeline.del(key);
+                }
+                await pipeline.exec();
+            }
             // release client
             await this.release(client);
             // return true if key has been removed
-            return (result >= 1);
+            return (keys.length > 0);
         }
         catch (err) {
             if (client) {

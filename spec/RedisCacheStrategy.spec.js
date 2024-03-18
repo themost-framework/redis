@@ -21,7 +21,8 @@ describe('RedisCacheStrategy', ()=> {
         newConfig.setSourceAt('settings/redis', {
             "options": {
                 "host": "127.0.0.1",
-                "port": 1000
+                "port": 1000,
+                "maxRetriesPerRequest": 1,
             }
         })
         const cacheStrategy = new RedisCacheStrategy({
