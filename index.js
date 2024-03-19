@@ -41,6 +41,13 @@ class RedisCacheStrategy {
         if (configuration == null) {
             configuration = new ConfigurationBase();
         }
+        // backward compatibility
+        if (configuration.hasStrategy(function DataCacheStrategy() {})) {
+            const thisService = this;
+            configuration.useStrategy(function DataCacheStrategy() {}, function() {
+                return thisService;
+            });
+        }
         /**
          * get redis configuration
          * @type {{options:*=,pool:*=, absolute_expiration: number=}}
