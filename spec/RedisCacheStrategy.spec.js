@@ -37,7 +37,18 @@ describe('RedisCacheStrategy', ()=> {
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
         await cacheStrategy.add('hello', 'Hello World');
         const value = await cacheStrategy.get('hello');
+        const ttl = await cacheStrategy.getExpirationTimeout('hello');
+        expect(ttl).toBeGreaterThan(0);
         expect(value).toEqual('Hello World');
+        await cacheStrategy.remove('hello');
+    });
+    it('should add persistent string', async ()=> {
+        let cacheStrategy = config.getStrategy(RedisCacheStrategy);
+        await cacheStrategy.add('hello', 'Hello World', -1);
+        const value = await cacheStrategy.get('hello');
+        const ttl = await cacheStrategy.getExpirationTimeout('hello');
+        expect(value).toEqual('Hello World');
+        expect(ttl).toEqual(-1);
         await cacheStrategy.remove('hello');
     });
     it('should add boolean', async ()=> {

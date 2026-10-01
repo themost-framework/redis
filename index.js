@@ -110,6 +110,11 @@ class RedisCacheStrategy {
              */
             client = await this.acquire();
             if (client.isOpen === false) { await client.connect(); }
+            if (typeof absoluteExpiration === 'number' && absoluteExpiration < 0) {
+                 await client.set(key, JSON.stringify(value));
+                 await this.release(client);
+                 return;
+            }
             // if absolute expiration is defined
             if (typeof absoluteExpiration === 'number' && absoluteExpiration >= 0) {
                 // set item with expiration
@@ -135,6 +140,32 @@ class RedisCacheStrategy {
             }
             // and throw error
             throw err;
+        }
+    }
+
+    /**
+     * Returns the expiration timeout for the given key in seconds. If the key does not exist or has no expiration, returns null.
+     * @param {string} key 
+     */
+    async getExpirationTimeout(key) {
+        let client;
+        try { 
+            /**
+             * @type {Redis}
+             */
+            client = await this.acquire();
+            if (client.isOpen === false) { await client.connect(); }
+            return await client.ttl(key);
+        } finally {
+            if (client) {
+                try {
+                    await this.release(client);
+                }
+                catch (err) {
+                    TraceUtils.warning('An error occurred while trying to release a redis client.');
+                    TraceUtils.warning(err);
+                }
+            }
         }
     }
 
