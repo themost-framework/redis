@@ -31,7 +31,8 @@ describe('RedisCacheStrategy', ()=> {
             }
         })
         expect(cacheStrategy).toBeTruthy();
-        await expectAsync(cacheStrategy.getOrDefault('hello', async () => true)).toBeRejected();
+        // noinspection JSCheckFunctionSignatures
+        await expect(cacheStrategy.getOrDefault('hello', async () => true)).rejects.toBeTruthy();
     });
     it('should add string', async ()=> {
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
@@ -79,7 +80,7 @@ describe('RedisCacheStrategy', ()=> {
          * @type {RedisCacheStrategy}
          */
         let cacheStrategy = config.getStrategy(RedisCacheStrategy);
-        await cacheStrategy.add('expired1', true, 5);
+        await cacheStrategy.add('expired1', true, 2);
         await new Promise((resolve, reject) => {
             setTimeout(()=> {
                 cacheStrategy.get('expired1').then( value => {
@@ -90,7 +91,7 @@ describe('RedisCacheStrategy', ()=> {
                 }).catch(err => {
                     return reject(err);
                 });
-            }, 7000);
+            }, 3000);
         });
     });
     it('should remove item', async ()=> {
