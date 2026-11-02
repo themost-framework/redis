@@ -265,10 +265,11 @@ class RedisCacheStrategy {
                 // add value to cache
                 await this.add(key, result, absoluteExpiration);
             }
-            else {
-                result = JSON.parse(value);
+            if (typeof value === 'string' && value.length === 0) {
+                // this operation is used to indicate that the key is present but has no value
+                return;
             }
-            return result;
+            return JSON.parse(value);
         } finally {
             if (client) {
                 await this.tryRelease(client);
