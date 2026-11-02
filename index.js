@@ -93,6 +93,25 @@ class RedisCacheStrategy {
     }
 
     /**
+     * @private
+     * @param {Redis} client
+     * @returns {Promise<void>}
+     */
+    async tryRelease(client) {
+        if (client == null) {
+            return;
+        }
+        try {
+            // try to release client
+            await this.release(client);
+        }
+        catch (err) {
+            TraceUtils.error('An error occurred while trying to release a redis client.');
+            TraceUtils.error(err);
+        }
+    }
+
+    /**
      *
      * @param {string} key
      * @param {*} value
@@ -112,7 +131,6 @@ class RedisCacheStrategy {
             if (client.isOpen === false) { await client.connect(); }
             if (typeof absoluteExpiration === 'number' && absoluteExpiration < 0) {
                  await client.set(key, JSON.stringify(value));
-                 await this.release(client);
                  return;
             }
             // if absolute expiration is defined
@@ -124,22 +142,10 @@ class RedisCacheStrategy {
                 // get absolute expiration from connect options and set item
                 await client.set(key, JSON.stringify(value), 'EX', this.absoluteExpiration);
             }
-            // finally release create
-            await this.release(client);
-        }
-        catch (err) {
+        } finally {
             if (client) {
-                try {
-                    // try to release client
-                    await this.release(client);
-                }
-                catch (err) {
-                    TraceUtils.error('An error occurred while trying to release a redis client.');
-                    TraceUtils.error(err);
-                }
+                await this.tryRelease(client);
             }
-            // and throw error
-            throw err;
         }
     }
 
@@ -158,13 +164,7 @@ class RedisCacheStrategy {
             return await client.ttl(key);
         } finally {
             if (client) {
-                try {
-                    await this.release(client);
-                }
-                catch (err) {
-                    TraceUtils.warning('An error occurred while trying to release a redis client.');
-                    TraceUtils.warning(err);
-                }
+                await this.tryRelease(client);
             }
         }
     }
@@ -190,26 +190,13 @@ class RedisCacheStrategy {
                 }
                 await pipeline.exec();
             }
-            // release client
-            await this.release(client);
             // return true if key has been removed
-            return (keys.length > 0);
-        }
-        catch (err) {
+            return keys.length;
+        } finally {
             if (client) {
-                try {
-                    // try to release client
-                    await this.release(client);
-                }
-                catch (err) {
-                    TraceUtils.error('An error occurred while trying to release a redis client.');
-                    TraceUtils.error(err);
-                }
+                await this.tryRelease(client);
             }
-            // and throw error
-            throw err;
         }
-
     }
     /**
      *
@@ -235,26 +222,24 @@ class RedisCacheStrategy {
             if (client.isOpen === false) { await client.connect(); }
             // get item
             const result = await client.get(key);
-            // try to release client
-            this.release(client);
+            // if the key is missing, the client returns null,
+            // so we return undefined to indicate that the key is not present in the cache
             if (result == null) {
                 return;
             }
-            return JSON.parse(result);
-        }
-        catch (err) {
-            if (client) {
-                try {
-                    // try to release client
-                    await this.release(client);
-                }
-                catch (err) {
-                    TraceUtils.error('An error occurred while trying to release a redis client.');
-                    TraceUtils.error(err);
-                }
+            // if the key is present, before parsing the value, we check if the result is an empty string,
+            // which indicates that the key has been set but has no value
+            // in this case, we return null to indicate that the key is present but has no value
+            if (result.length === 0) {
+                // this operation is used to indicate that the key is present but has no value
+                return;
             }
-            // and throw error
-            throw err;
+            // finally, we parse the result and return it
+            return JSON.parse(result);
+        } finally {
+            if (client) {
+                await this.tryRelease(client);
+            }
         }
     }
     /**
@@ -272,8 +257,10 @@ class RedisCacheStrategy {
             // try to get item// get item
             let value = await client.get(key);
             let result;
+            // if the key is missing, the client returns null,
+            // so we return undefined to indicate that the key is not present in the cache
             if (value == null) {
-                // call default value func
+                // call default value func for getting the default value
                 result = await getDefaultValue();
                 // add value to cache
                 await this.add(key, result, absoluteExpiration);
@@ -281,23 +268,11 @@ class RedisCacheStrategy {
             else {
                 result = JSON.parse(value);
             }
-            // release client
-            await this.release(client);
             return result;
-        }
-        catch (err) {
+        } finally {
             if (client) {
-                try {
-                    // try to release client
-                    await this.release(client);
-                }
-                catch (err) {
-                    TraceUtils.error('An error occurred while trying to release a redis client.');
-                    TraceUtils.error(err);
-                }
+                await this.tryRelease(client);
             }
-            // and throw error
-            throw err;
         }
 
     }

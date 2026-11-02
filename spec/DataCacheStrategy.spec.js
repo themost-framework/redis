@@ -36,7 +36,7 @@ describe('DataCacheStrategy', ()=> {
         const items = await ActionStatusTypes.getItems();
         expect(items).toBeTruthy();
         /**
-         * @type {RedisCacheStrategy}
+         * @type {DataCacheStrategy}
          */
         const service = context.getConfiguration().getStrategy(DataCacheStrategy);
         const deleted = await service.remove('/ActionStatusType/*');
