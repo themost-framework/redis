@@ -245,7 +245,7 @@ class RedisCacheStrategy {
     /**
      *
      * @param {string} key
-     * @param {Promise<*>} getDefaultValue
+     * @param {function():Promise<*>} getDefaultValue
      * @param {number=} absoluteExpiration
      * @returns Promise<*>
      */
@@ -264,6 +264,8 @@ class RedisCacheStrategy {
                 result = await getDefaultValue();
                 // add value to cache
                 await this.add(key, result, absoluteExpiration);
+                // return value
+                return result;
             }
             if (typeof value === 'string' && value.length === 0) {
                 // this operation is used to indicate that the key is present but has no value
